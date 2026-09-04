@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Capstone Research Paper — Content Decline Prioritization</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.7;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 25px;
+            color: #222;
+            background: #ffffff;
+        }
+
+        h1 {
+            font-size: 36px;
+            line-height: 1.25;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            margin-top: 45px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        h3 {
+            margin-top: 30px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 25px;
+        }
+
+        .meta {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+
+        .abstract {
+            background: #f8f8f8;
+            padding: 25px;
+            border-left: 5px solid #555;
+            margin: 25px 0;
+        }
+
+        .result-box {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+
+        .metric {
+            flex: 1;
+            min-width: 200px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .metric-number {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #f3f3f3;
+        }
+
+        code {
+            background: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .figure {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .figure img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .figure-caption {
+            color: #666;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #666;
+            font-size: 14px;
+        }
+
+        a {
+            color: #0969da;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Can Machine Learning Improve Content-Refresh Prioritization?</h1>
+
+    <div class="subtitle">
+        A capstone study of observed search-performance decline
+    </div>
+
+    <div class="meta">
+        <strong>Author:</strong> Maryam Arif<br>
+        <strong>Lane:</strong> Refresh / Content Opportunity Scoring<br>
+        <strong>Dataset:</strong> Anonymized FlyRank content-refresh dataset<br>
+        <strong>Observations:</strong> 30,000 content-level observations<br>
+        <strong>Date:</strong> September 2026
+    </div>
+
+
+    <h2>Abstract</h2>
+
+    <div class="abstract">
+        <p>
+            This project asks whether a simple Logistic Regression model can help identify
+            content items showing observed search-performance decline and improve
+            content-refresh prioritization compared with a transparent baseline.
+            The analysis uses 30,000 anonymized content-level observations from the FlyRank
+            content-refresh dataset, with historical search-performance, freshness, content,
+            and intent features.
+            A Logistic Regression model was evaluated using a grouped client-level test split,
+            with Precision@20 and Precision@50 used to measure ranking quality.
+            On the selected test split, the model achieved Precision@20 of 0.50 and
+            Precision@50 of 0.62, compared with 0.30 and 0.32 for the baseline.
+            The resulting ranked queue is intended as human-reviewed decision support for
+            prioritizing which content pages should be examined first, not as an automatic
+            content-editing or publishing system.
+        </p>
+    </div>
+
+
+    <h2>1. Problem Framing</h2>
+
+    <p>
+        The goal of this project is to help SEO and content teams decide which content pages
+        should be reviewed first when there are limited resources for content maintenance.
+    </p>
+
+    <p>
+        The unit of analysis is one content item. The model produces a decline-risk score
+        and a ranked review queue, with higher-scored items placed earlier in the queue.
+    </p>
+
+    <p>
+        The output supports a human decision: which pages should be reviewed first for a
+        possible refresh or other appropriate content action. The model does not
+        automatically rewrite, publish, delete, or redirect content.
+    </p>
+
+    <p>
+        A wrong decision has a practical cost. Reviewing a page that does not need attention
+        uses limited editorial time, while failing to review a genuinely declining and
+        valuable page can delay a useful content opportunity. Ranking helps focus review
+        effort on a smaller set of higher-priority pages.
+    </p>
+
+    <p>
+        Machine learning is useful here because it combines multiple historical performance
+        and content signals into one ranking instead of relying on a single rule such as
+        content age or search visibility.
+    </p>
+
+
+    <h2>2. Data Safety</h2>
+
+    <p>
+        The analysis uses the anonymized FlyRank content-refresh dataset used during the
+        internship. The modeling frame contains 30,000 content-level observations.
+    </p>
+
+    <p>The model features are:</p>
+
+    <ul>
+        <li><code>impressions_prev_30d</code></li>
+        <li><code>clicks_prev_30d</code></li>
+        <li><code>sessions_prev_30d</code></li>
+        <li><code>days_since_last_update</code></li>
+        <li><code>content_age_days</code></li>
+        <li><code>avg_position</code></li>
+        <li><code>search_volume</code></li>
+        <li><code>competition</code></li>
+        <li><code>word_count</code></li>
+        <li><code>char_count</code></li>
+        <li><code>content_type</code></li>
+        <li><code>main_intent</code></li>
+    </ul>
+
+    <p>
+        The target is derived from <code>trend_direction</code>, where
+        <code>down</code> is treated as observed decline.
+        Label-derived fields such as <code>trend_direction</code>,
+        <code>trend_pct</code>, <code>is_declining_label</code>, and
+        <code>declining_observed</code> are not used as model features.
+    </p>
+
+    <p>
+        Decision-derived fields such as <code>action</code>, <code>reason_code</code>,
+        <code>score</code>, and <code>baseline_score</code> are also excluded from
+        model training.
+    </p>
+
+    <p>
+        Pseudonymous IDs such as <code>client_id</code> and content identifiers are used
+        for grouping or joining only. They are not predictive features.
+    </p>
+
+    <p>
+        The report and deployed paper do not include client names, URLs, or private
+        search queries.
+    </p>
+
+
+    <h2>3. Baseline</h2>
+
+    <p>
+        The baseline is a simple freshness-and-visibility rule used to prioritize content
+        for review. A content item receives a positive baseline score when it has
+        previous-30-day impressions and has not been updated for at least 91 days.
+    </p>
+
+    <p>
+        The baseline is intentionally transparent and easy to reproduce. It provides a
+        simple comparison for the Logistic Regression model because both approaches
+        produce a ranking of content items for review and are evaluated using the same
+        test set and Precision@K metrics.
+    </p>
+
+    <p>
+        On the grouped client-level test split, the baseline achieved Precision@20 of
+        0.30 and Precision@50 of 0.32. The observed decline base rate on the same test
+        set was 51.65%.
+    </p>
+
+    <p>
+        The baseline is a useful reference point rather than a claim that freshness alone
+        explains content decline.
+    </p>
+
+
+    <h2>4. Model / Analysis</h2>
+
+    <p>
+        The analysis uses Logistic Regression as a binary classification model.
+        It was selected because the task has a binary observed outcome and the model
+        provides a relatively interpretable ranking signal.
+    </p>
+
+    <p>
+        The model uses 12 features.
+    </p>
+
+    <h3>Numeric Features</h3>
+
+    <ul>
+        <li><code>impressions_prev_30d</code></li>
+        <li><code>clicks_prev_30d</code></li>
+        <li><code>sessions_prev_30d</code></li>
+        <li><code>days_since_last_update</code></li>
+        <li><code>content_age_days</code></li>
+        <li><code>avg_position</code></li>
+        <li><code>search_volume</code></li>
+        <li><code>competition</code></li>
+        <li><code>word_count</code></li>
+        <li><code>char_count</code></li>
+    </ul>
+
+    <h3>Categorical Features</h3>
+
+    <ul>
+        <li><code>content_type</code></li>
+        <li><code>main_intent</code></li>
+    </ul>
+
+    <p>
+        Numeric missing values are median-imputed and standardized.
+        Categorical missing values are filled with the most frequent category and then
+        one-hot encoded.
+    </p>
+
+    <p>
+        The target is <code>declining_observed</code>, defined as 1 when
+        <code>trend_direction</code> is <code>down</code> and 0 otherwise.
+    </p>
+
+    <p>
+        The model deliberately excludes label-derived fields and decision-derived fields.
+        Client IDs are used to create the grouped validation split and are not used as
+        predictive features.
+    </p>
+
+    <p>
+        The model produces a probability score representing the estimated likelihood of
+        the observed decline label. Content items are ranked from highest to lowest score
+        for review prioritization.
+    </p>
+
+
+    <h2>5. Evaluation</h2>
+
+    <p>
+        The model was evaluated using a grouped client-level split.
+        <code>GroupShuffleSplit</code> was used with <code>client_id</code> as the
+        grouping variable, a 25% test size, and random state 42.
+    </p>
+
+    <p>
+        This produced 22,885 training observations from 24 clients and 7,115 test
+        observations from 8 clients, with no client overlap between the two sets.
+    </p>
+
+    <div class="result-box">
+
+        <div class="metric">
+            <div>Test Base Rate</div>
+            <div class="metric-number">51.65%</div>
+            <div>Observed decline</div>
+        </div>
+
+        <div class="metric">
+            <div>Model Precision@20</div>
+            <div class="metric-number">0.50</div>
+            <div>Logistic Regression</div>
+        </div>
+
+        <div class="metric">
+            <div>Model Precision@50</div>
+            <div class="metric-number">0.62</div>
+            <div>Logistic Regression</div>
+        </div>
+
+    </div>
+
+    <h3>Model vs Baseline</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Precision@20</th>
+                <th>Precision@50</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>Baseline</td>
+                <td>0.30</td>
+                <td>0.32</td>
+            </tr>
+
+            <tr>
+                <td>Logistic Regression</td>
+                <td>0.50</td>
+                <td>0.62</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>
+        The Logistic Regression model therefore showed higher measured Precision@20 and
+        Precision@50 than the baseline on this test split.
+    </p>
+
+    <p>
+        A short error analysis found both false positives and false negatives.
+        This means the model's ranking is useful for prioritization but is not a perfect
+        classifier. The errors also reinforce the need for human review before taking
+        content actions.
+    </p>
+
+    <p>
+        These results are measured on the selected grouped test split. They should not
+        be interpreted as guaranteed performance on future clients or future time periods.
+    </p>
+
+
+    <h2>6. Interpretation</h2>
+
+    <p>
+        The model combines historical search performance, freshness, content
+        characteristics, and search intent into a single ranking signal.
+    </p>
+
+    <p>
+        The strongest measured result is the improvement in ranking precision over the
+        simple baseline. Precision@20 increased from 0.30 for the baseline to 0.50 for
+        Logistic Regression, while Precision@50 increased from 0.32 to 0.62.
+        This suggests that the model can provide a more useful prioritization signal than
+        the baseline on the tested clients.
+    </p>
+
+    <p>
+        The model should not be interpreted as identifying a single cause of content
+        decline. Different content characteristics can be associated with the observed
+        label, and the model combines these signals rather than providing a causal
+        explanation.
+    </p>
+
+    <p>
+        The earlier signal audit also showed that staleness alone was a mixed signal.
+        This is why the action playbook combines the model ranking with other context,
+        such as previous search visibility and freshness, rather than treating page age
+        as a standalone decision rule.
+    </p>
+
+    <p>
+        A useful interpretation of the output is therefore: the model helps decide which
+        pages deserve attention first, while the reason code and underlying content
+        signals help a human reviewer understand the context.
+    </p>
+
+    <p>
+        The results are directional and observational. They do not show that any
+        individual feature causes decline or that refreshing a page will improve its
+        future performance.
+    </p>
+
+
+    <h2>7. Recommendation</h2>
+
+    <p>
+        The main recommendation is to use the model output as a ranked review queue for
+        content maintenance. Higher-scored content items should be reviewed earlier
+        because they received a higher estimated probability of the observed decline label.
+    </p>
+
+    <p>An editor can use the queue in the following way:</p>
+
+    <ol>
+        <li>Start with the highest-ranked content items.</li>
+        <li>Review the underlying search-performance and content signals.</li>
+        <li>
+            For items marked <code>VISIBLE_STALE</code>, pay particular attention to
+            whether the page has meaningful previous search visibility and has not been
+            updated for at least 91 days.
+        </li>
+        <li>
+            For items marked <code>HIGH_MODEL_SCORE</code>, review the page context,
+            search intent, content quality, and business value before deciding on an action.
+        </li>
+        <li>
+            Select the appropriate human-reviewed action, such as refreshing, monitoring,
+            or taking no action.
+        </li>
+    </ol>
+
+    <p>
+        The exported queue uses <code>REVIEW_REFRESH</code> as the recommended review
+        action, but this is not an instruction to automatically refresh every page.
+        The final decision remains with the content or SEO reviewer.
+    </p>
+
+    <p>
+        The model provides useful decision-support evidence because it achieved measured
+        Precision@20 of 0.50 and Precision@50 of 0.62 on the grouped test split,
+        compared with 0.30 and 0.32 for the baseline.
+        However, these results come from one grouped test split and should not be treated
+        as guaranteed performance on future data.
+    </p>
+
+    <p>
+        The queue should therefore be treated as a prioritization tool rather than an
+        automatic content-management system. A high score indicates that an item deserves
+        earlier review; it does not prove that the page will decline in the future or that
+        refreshing it will improve performance.
+    </p>
+
+
+    <h2>8. Reproducibility</h2>
+
+    <p>
+        The analysis can be reproduced from the project repository using the capstone
+        notebook and the anonymized starter dataset.
+    </p>
+
+    <p>
+        The main notebook is:
+        <code>work/notebooks/capstone.ipynb</code>
+    </p>
+
+    <p>
+        The modeling data is read from:
+        <code>data/raw/content_refresh_anonymized.csv</code>
+    </p>
+
+    <p>The grouped train/test split uses:</p>
+
+    <ul>
+        <li><code>GroupShuffleSplit</code></li>
+        <li><code>test_size=0.25</code></li>
+        <li><code>random_state=42</code></li>
+        <li>Grouping variable: <code>client_id</code></li>
+    </ul>
+
+    <p>
+        The model uses the preprocessing and Logistic Regression pipeline defined in
+        the capstone notebook. Numeric features are median-imputed and standardized,
+        while categorical features are most-frequent imputed and one-hot encoded.
+    </p>
+
+    <p>
+        A fresh run should execute the capstone notebook from top to bottom and recreate
+        the reported model, evaluation table, ranked recommendations, and exported figures.
+    </p>
+
+    <p>The main reproducibility outputs are:</p>
+
+    <ul>
+        <li><code>work/outputs/ml11_results_table.csv</code></li>
+        <li><code>work/figures/ml11_model_vs_baseline.png</code></li>
+        <li><code>work/figures/ml11_score_distribution.png</code></li>
+    </ul>
+
+    <p>
+        The evaluation is a grouped client-level validation rather than a sealed
+        future-time holdout. Therefore, the reported metrics should be treated as
+        measured results for the selected test split, not as guaranteed future
+        production performance.
+    </p>
+
+    <p>
+        The project uses a fixed random seed of 42 for the grouped split and Logistic
+        Regression model. The notebook contains the preprocessing, feature definitions,
+        training procedure, evaluation metrics, and export steps needed to reproduce
+        the analysis.
+    </p>
+
+
+    <h2>9. Acknowledgments &amp; Data Credit</h2>
+
+    <p>
+        Built on the FlyRank ML Internship dataset.
+        See <a href="https://flyrank.ai" target="_blank">FlyRank</a>.
+    </p>
+
+    <p>
+        This project was completed as part of the FlyRank ML Internship and uses the
+        anonymized dataset provided for the internship work.
+    </p>
+
+    <p>
+        All findings in this report are presented as observed, measured, directional,
+        and decision-support evidence. The reported Precision@20 and Precision@50
+        values are presented alongside the test-set base rate and baseline results.
+    </p>
+
+    <p>
+        The analysis does not make causal claims, does not make claims about Google
+        search algorithms, and does not include client-identifying details or private
+        search queries.
+    </p>
+
+    <p>
+        The results should be interpreted as evidence from the tested dataset and
+        validation split rather than as a guarantee of future traffic, rankings,
+        or business outcomes.
+    </p>
+
+
+    <footer>
+        <p>
+            <strong>Capstone Research Paper</strong><br>
+            Refresh / Content Opportunity Scoring<br>
+            Maryam Arif — September 2026
+        </p>
+
+        <p>
+            Source repository:
+            <a href="https://github.com/ma5029blp-wq/ML-flyrank-internship"
+               target="_blank">
+                ML-flyrank-internship
+            </a>
+        </p>
+    </footer>
+
+</body>
+</html>
